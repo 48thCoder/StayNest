@@ -24,13 +24,11 @@ const Hero = () => {
   return (
     <section className="relative min-h-[60vh] md:min-h-screen flex items-center justify-center pt-16 overflow-hidden">
       <div className="absolute inset-0 z-0">
-        {/* Mobile portrait image */}
         <img 
           src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=800&q=80" 
           alt="Modern PG accommodation" 
           className="w-full h-full object-cover md:hidden"
         />
-        {/* Desktop landscape image */}
         <img 
           src="https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
           alt="Modern PG accommodation" 

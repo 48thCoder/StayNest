@@ -55,7 +55,6 @@ const HowItWorks = () => {
               className="relative text-center group z-10"
             >
               <div className="relative w-20 h-20 mx-auto mb-6">
-                {/* White circle hides the connecting line behind the icon */}
                 <div className="absolute -inset-2 bg-white rounded-full" />
                 <motion.div 
                   className="relative w-full h-full bg-primary/10 rounded-2xl flex items-center justify-center z-10 cursor-default"
