@@ -172,6 +172,7 @@ const Navbar = () => {
                       <img
                         src={user.avatar}
                         alt={user.name}
+                        referrerPolicy="no-referrer"
                         className="w-8 h-8 rounded-full object-cover"
                       />
                     ) : (

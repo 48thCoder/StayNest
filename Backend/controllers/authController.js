@@ -1,5 +1,7 @@
 const { OAuth2Client } = require('google-auth-library');
+const crypto = require('crypto');
 const User = require('../models/User');
+const { sendEmail, getPasswordResetTemplate } = require('../utils/sendEmail');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -33,7 +35,7 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Please provide email and password' });
@@ -56,7 +58,7 @@ const login = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Incorrect password. Please try again.' });
     }
 
-    const token = user.generateToken();
+    const token = user.generateToken(Boolean(rememberMe));
 
     res.status(200).json({
       success: true,
@@ -170,4 +172,122 @@ const googleAuth = async (req, res) => {
   }
 };
 
-module.exports = { register, login, getMe, googleAuth };
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Please provide an email address' });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account found with this email address' });
+    }
+
+    if (user.authProvider === 'google' && !user.password) {
+      return res.status(400).json({
+        success: false,
+        message: 'This account uses Google Sign-In. Please sign in with Google.',
+      });
+    }
+
+    const otp = crypto.randomInt(100000, 1000000).toString();
+    user.resetPasswordOTP = otp;
+    user.resetPasswordExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await user.save();
+
+    console.log(`[AUTH] Password reset OTP for ${email}: ${otp}`);
+
+    let emailSent = false;
+    try {
+      const emailResult = await sendEmail({
+        to: user.email,
+        subject: `StayNest Password Reset Code: ${otp}`,
+        text: `Your StayNest password reset code is ${otp}. It expires in 10 minutes.`,
+        html: getPasswordResetTemplate(user.name, otp),
+      });
+      emailSent = Boolean(emailResult?.sent);
+    } catch (mailError) {
+      console.error('[EMAIL ERROR] Failed to deliver reset email:', mailError.message);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: emailSent
+        ? `A 6-digit verification code has been sent to ${email}.`
+        : 'Password reset code generated. Check your inbox or console.',
+      emailSent,
+      ...(process.env.NODE_ENV !== 'production' && { resetCode: otp }),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide email, reset code, and new password',
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long',
+      });
+    }
+
+    const user = await User.findOne({ email }).select('+password +resetPasswordOTP +resetPasswordExpire');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'No account found with this email' });
+    }
+
+    if (!user.resetPasswordOTP || !user.resetPasswordExpire) {
+      return res.status(400).json({
+        success: false,
+        message: 'No reset request found. Please request a new reset code.',
+      });
+    }
+
+    if (user.resetPasswordExpire < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset code has expired. Please request a new one.',
+      });
+    }
+
+    if (user.resetPasswordOTP !== otp.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid reset code. Please check and try again.',
+      });
+    }
+
+    const isSamePassword = await user.matchPassword(newPassword);
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be different from your current password.',
+      });
+    }
+
+    user.password = newPassword;
+    user.resetPasswordOTP = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully. You can now log in.',
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { register, login, getMe, googleAuth, forgotPassword, resetPassword };

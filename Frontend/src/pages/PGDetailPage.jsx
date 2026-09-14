@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -6,7 +6,7 @@ import {
   CheckCircle, Phone, Mail, Bed, User, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import AnimatedSection from '../components/AnimatedSection';
-import { pgData } from '../data/pgs';
+import { fetchPGById } from '../utils/api';
 import { formatPrice } from '../utils/helpers';
 
 const amenityIcons = {
@@ -19,11 +19,41 @@ const amenityIcons = {
 
 const PGDetailPage = () => {
   const { id } = useParams();
-  const pg = pgData.find(p => p.id === parseInt(id));
+  const [pg, setPg] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageDirection, setImageDirection] = useState(1);
 
-  if (!pg) {
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setLoading(true);
+    setError(null);
+    fetchPGById(id)
+      .then((data) => {
+        setPg(data);
+      })
+      .catch((err) => {
+        setError(err.message || 'PG Not Found');
+        setPg(null);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen pt-20 flex items-center justify-center bg-warm-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+          <p className="text-warm-gray-600 font-medium">Loading details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !pg) {
     return (
       <div className="min-h-screen pt-20 flex items-center justify-center">
         <div className="text-center">
@@ -32,7 +62,7 @@ const PGDetailPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            PG Not Found
+            {error || 'PG Not Found'}
           </motion.h2>
           <Link to="/listings" className="text-primary hover:underline">Back to Listings</Link>
         </div>
@@ -40,13 +70,16 @@ const PGDetailPage = () => {
     );
   }
 
+  const images = (pg.images && pg.images.length > 0) ? pg.images : [pg.image];
+
   const nextImage = () => {
     setImageDirection(1);
-    setCurrentImageIndex((prev) => (prev + 1) % pg.images.length);
+    setCurrentImageIndex((prev) => (prev + 1) % images.length);
   };
+
   const prevImage = () => {
     setImageDirection(-1);
-    setCurrentImageIndex((prev) => (prev - 1 + pg.images.length) % pg.images.length);
+    setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 
   const genderLabel = pg.gender === 'boys' ? 'Boys PG' : pg.gender === 'girls' ? 'Girls PG' : 'Co-ed PG';
@@ -97,7 +130,7 @@ const PGDetailPage = () => {
                 <AnimatePresence initial={false} custom={imageDirection} mode="wait">
                   <motion.img 
                     key={currentImageIndex}
-                    src={pg.images[currentImageIndex]} 
+                    src={images[currentImageIndex]} 
                     alt={pg.name} 
                     className="w-full h-full object-cover absolute inset-0"
                     custom={imageDirection}
@@ -108,41 +141,47 @@ const PGDetailPage = () => {
                     transition={{ duration: 0.3, ease: 'easeInOut' }}
                   />
                 </AnimatePresence>
-                <motion.button 
-                  onClick={prevImage}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-lg"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <ChevronLeft className="w-6 h-6 text-warm-gray-700" />
-                </motion.button>
-                <motion.button 
-                  onClick={nextImage}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-lg"
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <ChevronRight className="w-6 h-6 text-warm-gray-700" />
-                </motion.button>
+                {images.length > 1 && (
+                  <>
+                    <motion.button 
+                      onClick={prevImage}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-lg"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <ChevronLeft className="w-6 h-6 text-warm-gray-700" />
+                    </motion.button>
+                    <motion.button 
+                      onClick={nextImage}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-lg"
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <ChevronRight className="w-6 h-6 text-warm-gray-700" />
+                    </motion.button>
+                  </>
+                )}
               </div>
-              <div className="p-4 flex gap-3 overflow-x-auto scrollbar-hide">
-                {pg.images.map((img, idx) => (
-                  <motion.button 
-                    key={idx}
-                    onClick={() => {
-                      setImageDirection(idx > currentImageIndex ? 1 : -1);
-                      setCurrentImageIndex(idx);
-                    }}
-                    className={`flex-shrink-0 w-24 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                      idx === currentImageIndex ? 'border-primary' : 'border-transparent hover:border-primary'
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <img src={img} alt={`${pg.name} ${idx + 1}`} className="w-full h-full object-cover" />
-                  </motion.button>
-                ))}
-              </div>
+              {images.length > 1 && (
+                <div className="p-4 flex gap-3 overflow-x-auto scrollbar-hide">
+                  {images.map((img, idx) => (
+                    <motion.button 
+                      key={idx}
+                      onClick={() => {
+                        setImageDirection(idx > currentImageIndex ? 1 : -1);
+                        setCurrentImageIndex(idx);
+                      }}
+                      className={`flex-shrink-0 w-24 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
+                        idx === currentImageIndex ? 'border-primary' : 'border-transparent hover:border-primary'
+                      }`}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <img src={img} alt={`${pg.name} ${idx + 1}`} className="w-full h-full object-cover" />
+                    </motion.button>
+                  ))}
+                </div>
+              )}
             </motion.div>
 
             <AnimatedSection animation="fadeUp">
@@ -171,7 +210,7 @@ const PGDetailPage = () => {
                 
                 <h3 className="font-display font-semibold text-lg text-warm-gray-800 mb-3">Amenities</h3>
                 <div className="flex flex-wrap gap-3 mb-6">
-                  {pg.amenities.map((amenity, i) => {
+                  {(pg.amenities || []).map((amenity, i) => {
                     const item = amenityIcons[amenity];
                     const Icon = item?.icon;
                     return Icon ? (
@@ -193,7 +232,7 @@ const PGDetailPage = () => {
 
                 <h3 className="font-display font-semibold text-lg text-warm-gray-800 mb-3">House Rules</h3>
                 <ul className="space-y-2">
-                  {pg.rules.map((rule, idx) => (
+                  {(pg.rules || []).map((rule, idx) => (
                     <motion.li 
                       key={idx} 
                       className="flex items-start gap-2 text-warm-gray-600"
@@ -243,7 +282,7 @@ const PGDetailPage = () => {
                 <div className="space-y-3 mb-6">
                   <div className="flex items-center gap-2 text-warm-gray-600">
                     <Bed className="w-4 h-4 text-primary" />
-                    <span>{pg.roomTypes.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')} Sharing</span>
+                    <span>{(pg.roomTypes || []).map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')} Sharing</span>
                   </div>
                   <div className="flex items-center gap-2 text-warm-gray-600">
                     <User className="w-4 h-4 text-primary" />
@@ -267,41 +306,47 @@ const PGDetailPage = () => {
               </div>
             </AnimatedSection>
 
-            <AnimatedSection animation="fadeLeft" delay={0.3}>
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-warm-gray-200">
-                <h3 className="font-display font-semibold text-lg text-warm-gray-800 mb-4">Contact Owner</h3>
-                <div className="flex items-center gap-3 mb-4">
-                  <motion.div 
-                    className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"
-                    whileHover={{ scale: 1.1, rotate: 5 }}
-                  >
-                    <User className="w-6 h-6 text-primary" />
-                  </motion.div>
-                  <div>
-                    <p className="font-semibold text-warm-gray-800">{pg.owner.name}</p>
-                    <p className="text-sm text-warm-gray-500">Property Owner</p>
+            {pg.owner && (
+              <AnimatedSection animation="fadeLeft" delay={0.3}>
+                <div className="bg-white rounded-2xl p-6 shadow-sm border border-warm-gray-200">
+                  <h3 className="font-display font-semibold text-lg text-warm-gray-800 mb-4">Contact Owner</h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <motion.div 
+                      className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center"
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                    >
+                      <User className="w-6 h-6 text-primary" />
+                    </motion.div>
+                    <div>
+                      <p className="font-semibold text-warm-gray-800">{pg.owner.name}</p>
+                      <p className="text-sm text-warm-gray-500">Property Owner</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {pg.owner.phone && (
+                      <motion.a 
+                        href={`tel:${pg.owner.phone}`} 
+                        className="flex items-center gap-3 text-warm-gray-600 hover:text-primary transition-colors group"
+                        whileHover={{ x: 4 }}
+                      >
+                        <Phone className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                        <span>{pg.owner.phone}</span>
+                      </motion.a>
+                    )}
+                    {pg.owner.email && (
+                      <motion.a 
+                        href={`mailto:${pg.owner.email}`} 
+                        className="flex items-center gap-3 text-warm-gray-600 hover:text-primary transition-colors group"
+                        whileHover={{ x: 4 }}
+                      >
+                        <Mail className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
+                        <span>{pg.owner.email}</span>
+                      </motion.a>
+                    )}
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <motion.a 
-                    href={`tel:${pg.owner.phone}`} 
-                    className="flex items-center gap-3 text-warm-gray-600 hover:text-primary transition-colors group"
-                    whileHover={{ x: 4 }}
-                  >
-                    <Phone className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
-                    <span>{pg.owner.phone}</span>
-                  </motion.a>
-                  <motion.a 
-                    href={`mailto:${pg.owner.email}`} 
-                    className="flex items-center gap-3 text-warm-gray-600 hover:text-primary transition-colors group"
-                    whileHover={{ x: 4 }}
-                  >
-                    <Mail className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
-                    <span>{pg.owner.email}</span>
-                  </motion.a>
-                </div>
-              </div>
-            </AnimatedSection>
+              </AnimatedSection>
+            )}
           </div>
         </div>
       </div>

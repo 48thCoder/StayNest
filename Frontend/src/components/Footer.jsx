@@ -71,8 +71,8 @@ const Footer = () => {
               <ul className="space-y-3">
                 <li><Link to="/" className="text-warm-gray-400 hover:text-primary-light transition-colors">Home</Link></li>
                 <li><Link to="/listings" className="text-warm-gray-400 hover:text-primary-light transition-colors">Browse PGs</Link></li>
-                <li><a href="#" className="text-warm-gray-400 hover:text-primary-light transition-colors">About Us</a></li>
-                <li><a href="#" className="text-warm-gray-400 hover:text-primary-light transition-colors">Contact</a></li>
+                <li><Link to="/about" className="text-warm-gray-400 hover:text-primary-light transition-colors">About Us</Link></li>
+                <li><Link to="/contact" className="text-warm-gray-400 hover:text-primary-light transition-colors">Contact</Link></li>
                 <li><a href="#" className="text-warm-gray-400 hover:text-primary-light transition-colors">Blog</a></li>
               </ul>
             </div>
@@ -149,9 +149,9 @@ const Footer = () => {
         >
           <p className="text-warm-gray-400 text-sm">© 2026 StayNest. All rights reserved.</p>
           <div className="flex gap-6 text-sm">
-            <a href="#" className="text-warm-gray-400 hover:text-primary-light transition-colors">Privacy Policy</a>
-            <a href="#" className="text-warm-gray-400 hover:text-primary-light transition-colors">Terms of Service</a>
-            <a href="#" className="text-warm-gray-400 hover:text-primary-light transition-colors">Cookie Policy</a>
+            <Link to="/privacy" className="text-warm-gray-400 hover:text-primary-light transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="text-warm-gray-400 hover:text-primary-light transition-colors">Terms of Service</Link>
+            <Link to="/cookies" className="text-warm-gray-400 hover:text-primary-light transition-colors">Cookie Policy</Link>
           </div>
         </motion.div>
       </div>

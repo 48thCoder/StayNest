@@ -52,6 +52,14 @@ const userSchema = new mongoose.Schema(
     avatar: {
       type: String,
     },
+    resetPasswordOTP: {
+      type: String,
+      select: false,
+    },
+    resetPasswordExpire: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,
@@ -68,9 +76,9 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-userSchema.methods.generateToken = function () {
+userSchema.methods.generateToken = function (rememberMe = true) {
   return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
+    expiresIn: rememberMe ? '30d' : '1d',
   });
 };
 

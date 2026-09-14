@@ -82,7 +82,7 @@ const PGCard = ({ pg, index = 0 }) => {
             whileTap={{ scale: 0.95 }}
           >
             <Link 
-              to={`/pg/${pg.id}`}
+              to={`/pg/${pg._id || pg.id}`}
               className="bg-warm-gray-100 hover:bg-primary hover:text-white text-warm-gray-700 px-4 py-2 rounded-xl font-medium transition-all duration-200 inline-block"
             >
               View Details
